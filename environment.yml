@@ -6,6 +6,7 @@ channels:
 dependencies:
   - r-base=4.0
   - python=3.11
+  - r-shiny
   - r-dplyr
   - r-ggplot2
   - r-reshape2
