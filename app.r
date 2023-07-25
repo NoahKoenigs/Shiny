@@ -12,7 +12,7 @@ library(shiny)
 # Define UI for application that draws a histogram
 ui <- fluidPage(
     # Application title
-    titlePanel("fileInput"),
+    titlePanel("CSV Linear Reader"),
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
@@ -44,11 +44,12 @@ ui <- fluidPage(
             radioButtons("disp", "Display",
                          choices = c(Head = "head",
                                      All = "all"),
-                         selected = "head")
+                         selected = "all")
         ),
-        # Show a plot of the generated distribution
+        # Show a plot of the generated distribution#######################################################################################
         mainPanel(
            plotOutput("distPlot"),
+           plotOutput("scatter"),
            plotOutput("lmPlot"),
            tableOutput("contents")
         )
