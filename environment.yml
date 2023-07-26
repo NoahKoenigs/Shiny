@@ -13,10 +13,9 @@ dependencies:
   - r-tidyverse
   - r-plotly
   - r-stringr
-  - toolz
-  - matplotlib
-  - pandas
   - pip
   - pip:
     - scikit-learn
     - numpy
+    - matplotlib
+    - pandas
