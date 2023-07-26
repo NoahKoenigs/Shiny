@@ -17,4 +17,4 @@ dependencies:
     - matplotlib
     - numpy
     - scipy
-    - sudo pip3 install --upgrade jupyter
+    - jupyter
