@@ -1,117 +1,144 @@
 library(shiny)
 library(ggplot2)
-
-# Define UI for application that draws a histogram
+## Define UI
 ui <- fluidPage(
-  # Application title
   titlePanel("CSV Linear Reader"),
-  # Sidebar with a slider input for number of bins 
+  # Subtitles
+   h3("Optimized for csv files with column headings"),
+    h4("If there are no column headings, they will auto-populate"),
+    h5("It is advised to NOT change auto-populated names"),
   sidebarLayout(
     sidebarPanel(
-      # Input: Select a file 
       fileInput("file1", "Choose CSV File",
                 multiple = FALSE,
                 accept = c("text/csv",
                            "text/comma-separated-values,text/plain",
                            ".csv")),
-      # Horizontal line 
       tags$hr(),
-      # Input: Checkbox if file has header 
       checkboxInput("header", "Header", TRUE),
-      # Input: Select separator 
+        #Adding in button options
       radioButtons("sep", "Separator",
                    choices = c(Comma = ",",
                                Semicolon = ";",
                                Tab = "\t"),
                    selected = ","),
-      # Input: Select quotes 
       radioButtons("quote", "Quote",
                    choices = c(None = "",
                                "Double Quote" = '"',
                                "Single Quote" = "'"),
                    selected = '"'),
-      # Horizontal line ----
       tags$hr(),
-      # Input: Select number of rows to display ----
       radioButtons("disp", "Display",
                    choices = c(Head = "Preview",
                                None = "None",
                                All = "All"),
                    selected = "None"),
-      # Adding a reset button
+        #Adding in action buttons
       actionButton("reset_btn", "Reset"),
-      
-      # Adding a histogram button
-      actionButton("histogram_btn", "Histogram")
+      actionButton("histogram_btn", "Histogram"),
+      actionButton("model_btn", "Add Linear Model"),
+        # label Axis X and Y
+      textInput("x_col", "Select X Column:", NULL),
+      textInput("y_col", "Select Y Column:", NULL)
     ),
     
-    # Show a plot of the generated distribution
     mainPanel(
       plotOutput("plot"),
       tableOutput("contents")
     )
   )
 )
-
-# Define server logic required to draw a histogram (not shown on this Shiny app)
+# Server and Reactivity to Inputs
 server <- function(input, output, session) {
   dataInput <- reactive({
     if (is.null(input$file1))
       return(NULL)
+    
     df <- read.csv(input$file1$datapath,
                    header = input$header,
                    sep = input$sep,
                    quote = input$quote)
+    
+    if (!input$header) {
+      colnames(df) <- c("Column 1", "Column 2")
+    }
+    
     return(df)
   })
-  
-  # Observe Tag for Reset button
+  # Observing column auto-inputs
+  observe({
+    if (!is.null(dataInput())) {
+      updateSelectInput(session, "x_col", choices = colnames(dataInput()))
+      updateSelectInput(session, "y_col", choices = colnames(dataInput()))
+      updateSelectInput(session, "x_col", selected = colnames(dataInput())[1])
+      updateSelectInput(session, "y_col", selected = colnames(dataInput())[2])
+    }
+  })
+  #add in reset button for page
   observeEvent(input$reset_btn, {
     updateTextInput(session, "dem", "Reset")
-    
-    # Reset the input values to their default state
     updateRadioButtons(session, "disp", selected = "None")
     updateRadioButtons(session, "sep", selected = ",")
     updateRadioButtons(session, "quote", selected = '"')
     updateCheckboxInput(session, "header", value = TRUE)
     updateFileInput(session, "file1", NULL)
   })
-  
-  # Show histogram when the "Histogram" button is clicked
+  #addding histogram button option
   observeEvent(input$histogram_btn, {
     if (input$histogram_btn > 0) {
       output$plot <- renderPlot({
         if (is.null(dataInput()))
           return(NULL)
         
-        x <- dataInput()[["x"]]
-        bins <- seq(min(x), max(x), length.out = 10)  # Adjust the number of bins as needed
+        x <- dataInput()[[input$x_col]]
+        bins <- seq(min(x), max(x), length.out = 10)
         hist(x, breaks = bins, col = 'orange', border = 'white', main = "Histogram")
       })
     }
   })
-  
-  # Show regression plot by default
+  # Linear Model button
+  observeEvent(input$model_btn, {
+    if (input$model_btn > 0) {
+      output$plot <- renderPlot({
+        if (is.null(dataInput()))
+          return(NULL)
+        
+        x <- dataInput()[[input$x_col]]
+        y <- dataInput()[[input$y_col]]
+        
+        coefs <- coef(lm(y ~ x, data = dataInput()))
+        intercept <- round(coefs[1], 2)
+        slope <- round(coefs[2], 2)
+        r2 <- round(summary(lm(y ~ x, data = dataInput()))$r.squared, 2)
+        
+        ggplot(dataInput(), aes_string(x = input$x_col, y = input$y_col)) +
+          geom_point(colour = 'green') +
+          geom_smooth(method = "lm", se = FALSE, color = 'orange') +
+          ggtitle('Scatter Plot') +
+          xlab('X') +
+          ylab('Y') +
+          geom_text(aes(x = 10, y = 21, label = paste("Intercept =", intercept))) +
+          geom_text(aes(x = 10, y = 20, label = paste("Slope =", slope))) +
+          geom_text(aes(x = 10, y = 19, label = paste("R-squared =", r2)))
+      })
+    }
+  })
+
+  #Starting Plot
   output$plot <- renderPlot({
     if (is.null(dataInput()))
       return(NULL)
     
-    coefs <- coef(lm(y ~ x, data = dataInput()))
-    intercept <- round(coefs[1], 2)
-    slope <- round(coefs[2], 2)
-    r2 <- round(summary(lm(y ~ x, data = dataInput()))$r.squared, 2)
+    x <- dataInput()[[input$x_col]]
+    y <- dataInput()[[input$y_col]]
     
-    ggplot(dataInput(), aes(x = x, y = y)) +
-      geom_point(colour = 'red') +
-      geom_smooth(method = "lm", se = FALSE, color = 'blue') +
-      ggtitle('X vs Y') +
+    ggplot(dataInput(), aes_string(x = input$x_col, y = input$y_col)) +
+      geom_point(colour = 'green') +
+      ggtitle('Scatter Plot') +
       xlab('X') +
-      ylab('Y') +
-      geom_text(aes(x = 10, y = 21, label = paste("Intercept =", intercept))) +
-      geom_text(aes(x = 10, y = 20, label = paste("Slope =", slope))) +
-      geom_text(aes(x = 10, y = 19, label = paste("R-squared =", r2)))
+      ylab('Y')
   })
-  
+  # Table will NOT auto-populate
   output$contents <- renderTable({
     if (is.null(dataInput()))
       return(NULL)
@@ -126,8 +153,9 @@ server <- function(input, output, session) {
   })       
 }
 
-# Run the application 
 shinyApp(ui = ui, server = server)
+
+
 
 
 
