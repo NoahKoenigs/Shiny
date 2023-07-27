@@ -47,8 +47,7 @@ ui <- fluidPage(
     
     # Show a plot of the generated distribution
     mainPanel(
-      plotOutput("distPlot"),
-      plotOutput("regPlot"),  # Adding a plot output for regression plot
+      plotOutput("plot"),
       tableOutput("contents")
     )
   )
@@ -81,7 +80,7 @@ server <- function(input, output, session) {
   # Show histogram when the "Histogram" button is clicked
   observeEvent(input$histogram_btn, {
     if (input$histogram_btn > 0) {
-      output$distPlot <- renderPlot({
+      output$plot <- renderPlot({
         if (is.null(dataInput()))
           return(NULL)
         
@@ -89,27 +88,18 @@ server <- function(input, output, session) {
         bins <- seq(min(x), max(x), length.out = 10)  # Adjust the number of bins as needed
         hist(x, breaks = bins, col = 'orange', border = 'white', main = "Histogram")
       })
-      output$regPlot <- NULL  # Remove the regression plot
     }
   })
   
   # Show regression plot by default
-  output$distPlot <- renderPlot({
+  output$plot <- renderPlot({
     if (is.null(dataInput()))
       return(NULL)
     
-    plot(dataInput()[, "x"], dataInput()[, "y"], main = "Scatter Plot")
-  })
-  
-  # Generate and show regression plot when data is available
-  output$regPlot <- renderPlot({
-    if (is.null(dataInput()))
-      return(NULL)
-    
-    coefs <- coef(lm(dataInput()$y ~ dataInput()$x))
+    coefs <- coef(lm(y ~ x, data = dataInput()))
     intercept <- round(coefs[1], 2)
     slope <- round(coefs[2], 2)
-    r2 <- round(summary(lm(dataInput()$y ~ dataInput()$x))$r.squared, 2)
+    r2 <- round(summary(lm(y ~ x, data = dataInput()))$r.squared, 2)
     
     ggplot(dataInput(), aes(x = x, y = y)) +
       geom_point(colour = 'red') +
@@ -117,10 +107,9 @@ server <- function(input, output, session) {
       ggtitle('X vs Y') +
       xlab('X') +
       ylab('Y') +
-      geom_text(aes(x = 10, y = 11, label = paste("intercept =", intercept))) +
-      geom_text(aes(x = 10, y = 12, label = paste("slope =", slope))) +
-      geom_text(aes(x = 10, y = 13, label = paste("coefficient =", coefs))) +
-      geom_text(aes(x = 10, y = 14, label = paste("R squared =", r2)))
+      geom_text(aes(x = 10, y = 21, label = paste("Intercept =", intercept))) +
+      geom_text(aes(x = 10, y = 20, label = paste("Slope =", slope))) +
+      geom_text(aes(x = 10, y = 19, label = paste("R-squared =", r2)))
   })
   
   output$contents <- renderTable({
